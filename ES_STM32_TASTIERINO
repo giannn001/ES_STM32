@@ -1,0 +1,151 @@
+
+/* USER CODE END Header */
+
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
+
+/* USER CODE END Includes */
+
+/* Private typedef -----------------------------------------------------------*/
+/* USER CODE BEGIN PTD */
+
+/* USER CODE END PTD */
+
+/* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+
+/* USER CODE END PD */
+
+/* Private macro -------------------------------------------------------------*/
+/* USER CODE BEGIN PM */
+
+/* USER CODE END PM */
+
+/* Private variables ---------------------------------------------------------*/
+/* USER CODE BEGIN PV */
+
+/* Mappa dei valori della tastiera 4x4 */
+const uint8_t keyValues[4][4] = {
+    {1, 2, 3, 10},
+    {4, 5, 6, 11},
+    {7, 8, 9, 12},
+    {15, 0, 14, 13}
+};
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+
+/* USER CODE BEGIN PFP */
+
+void mostraBinario(uint8_t valore);
+int8_t leggiTasto(void);
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+
+/* Mostra il numero sui LED in binario */
+void mostraBinario(uint8_t valore)
+{
+    HAL_GPIO_WritePin(LED0_GPIO_Port, LED0_Pin, (valore & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, (valore & 2) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, (valore & 4) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, (valore & 8) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+
+/* Scansione della tastiera */
+int8_t leggiTasto(void)
+{
+    for(int r = 0; r < 4; r++)
+    {
+        /* spegne tutte le righe */
+        HAL_GPIO_WritePin(GPIOB, R1_Pin | R2_Pin | R3_Pin | R4_Pin, GPIO_PIN_RESET);
+
+        /* attiva una riga alla volta */
+        if(r == 0) HAL_GPIO_WritePin(R1_GPIO_Port, R1_Pin, GPIO_PIN_SET);
+        if(r == 1) HAL_GPIO_WritePin(R2_GPIO_Port, R2_Pin, GPIO_PIN_SET);
+        if(r == 2) HAL_GPIO_WritePin(R3_GPIO_Port, R3_Pin, GPIO_PIN_SET);
+        if(r == 3) HAL_GPIO_WritePin(R4_GPIO_Port, R4_Pin, GPIO_PIN_SET);
+
+        HAL_Delay(5);
+
+        /* controlla le colonne */
+        if(HAL_GPIO_ReadPin(C1_GPIO_Port, C1_Pin) == GPIO_PIN_SET) return keyValues[r][0];
+        if(HAL_GPIO_ReadPin(C2_GPIO_Port, C2_Pin) == GPIO_PIN_SET) return keyValues[r][1];
+        if(HAL_GPIO_ReadPin(C3_GPIO_Port, C3_Pin) == GPIO_PIN_SET) return keyValues[r][2];
+        if(HAL_GPIO_ReadPin(C4_GPIO_Port, C4_Pin) == GPIO_PIN_SET) return keyValues[r][3];
+    }
+
+    return -1;
+}
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+
+  /* USER CODE BEGIN 1 */
+
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+
+  /* USER CODE BEGIN 2 */
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+      int8_t tasto = leggiTasto();
+
+      if(tasto >= 0)
+      {
+          /* accende LED di conferma */
+          HAL_GPIO_WritePin(PIN_LED_GPIO_Port, PIN_LED_Pin, GPIO_PIN_SET);
+
+          /* mostra valore in binario */
+          mostraBinario(tasto);
+
+          HAL_Delay(200);
+
+          /* spegne LED di conferma */
+          HAL_GPIO_WritePin(PIN_LED_GPIO_Port, PIN_LED_Pin, GPIO_PIN_RESET);
+      }
+
+      HAL_Delay(20);
+  }
+  /* USER CODE END WHILE */
+
+  /* USER CODE BEGIN 3 */
+  /* USER CODE END 3 */
+}
