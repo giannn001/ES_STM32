@@ -1,0 +1,185 @@
+
+/* USER CODE END Header */
+
+#include "main.h"
+
+/* USER CODE BEGIN PD */
+#define RESET(c) LL_GPIO_ResetOutputPin(c##_GPIO_Port,c##_Pin)
+#define SET(c) LL_GPIO_SetOutputPin(c##_GPIO_Port,c##_Pin)
+#define DIR_OUT(c) LL_GPIO_SetPinMode(c##_GPIO_Port, c##_Pin, LL_GPIO_MODE_OUTPUT)
+#define DIR_IN(c) LL_GPIO_SetPinMode(c##_GPIO_Port, c##_Pin, LL_GPIO_MODE_INPUT)
+#define READ(c) LL_GPIO_IsInputPinSet(c##_GPIO_Port,c##_Pin)
+/* USER CODE END PD */
+
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+
+/* USER CODE BEGIN PFP */
+void Delay_uS(int uSTim);
+void lcd_nibble(uint8_t nibble);
+void lcd_byte(uint8_t data, uint8_t mode);
+void lcd_cmd(uint8_t cmd);
+void lcd_char(char c);
+void lcd_init(void);
+void lcd_print(char* str);
+void lcd_set_cursor(uint8_t row, uint8_t col);
+/* USER CODE END PFP */
+
+/* USER CODE BEGIN 0 */
+
+void Delay_uS(int uSTim)
+{
+    for(volatile int i = 0; i < uSTim * 3; i++)
+    {
+        __NOP();
+    }
+}
+
+void lcd_nibble(uint8_t nibble)
+{
+    /* invia i 4 bit al display */
+    (nibble & 0x01) ? SET(DISP_DB4) : RESET(DISP_DB4);
+    (nibble & 0x02) ? SET(DISP_DB5) : RESET(DISP_DB5);
+    (nibble & 0x04) ? SET(DISP_DB6) : RESET(DISP_DB6);
+    (nibble & 0x08) ? SET(DISP_DB7) : RESET(DISP_DB7);
+
+    /* impulso di enable */
+    Delay_uS(1);
+    SET(DISP_EN);
+    Delay_uS(1);
+    RESET(DISP_EN);
+    Delay_uS(100);
+}
+
+void lcd_byte(uint8_t data, uint8_t mode)
+{
+    /* mode = 0 comando, mode = 1 dato */
+    if(mode) SET(DISP_RS);
+    else RESET(DISP_RS);
+
+    RESET(DISP_RW);
+
+    lcd_nibble(data >> 4);   // parte alta
+    lcd_nibble(data & 0x0F); // parte bassa
+}
+
+void lcd_cmd(uint8_t cmd)
+{
+    lcd_byte(cmd,0);
+
+    /* alcuni comandi richiedono più tempo */
+    if(cmd == 0x01 || cmd == 0x02)
+    {
+        HAL_Delay(2);
+    }
+}
+
+void lcd_char(char c)
+{
+    lcd_byte(c,1);
+}
+
+void lcd_init(void)
+{
+    RESET(DISP_EN);
+    RESET(DISP_RS);
+    RESET(DISP_RW);
+
+    HAL_Delay(50);
+
+    /* sequenza di inizializzazione LCD */
+    lcd_nibble(0x03);
+    HAL_Delay(5);
+
+    lcd_nibble(0x03);
+    Delay_uS(150);
+
+    lcd_nibble(0x03);
+    Delay_uS(150);
+
+    lcd_nibble(0x02); // modalità 4 bit
+    Delay_uS(150);
+
+    lcd_cmd(0x28); // 4 bit, 2 linee
+    lcd_cmd(0x08); // display off
+    lcd_cmd(0x01); // clear
+    HAL_Delay(2);
+    lcd_cmd(0x06); // incrementa cursore
+    lcd_cmd(0x0C); // display on
+}
+
+void lcd_print(char* str)
+{
+    while(*str)
+    {
+        lcd_char(*str);
+        str++;
+    }
+}
+
+void lcd_set_cursor(uint8_t row, uint8_t col)
+{
+    uint8_t address;
+
+    if(row == 0)
+        address = 0x80 + col;
+    else
+        address = 0xC0 + col;
+
+    lcd_cmd(address);
+}
+
+/* USER CODE END 0 */
+
+int main(void)
+{
+  HAL_Init();
+  SystemClock_Config();
+  MX_GPIO_Init();
+
+  /* USER CODE BEGIN 2 */
+  lcd_init();
+  lcd_print("LUCA");
+  /* USER CODE END 2 */
+
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+    HAL_Delay(1000);
+  }
+  /* USER CODE END 3 */
+}
+
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  __HAL_FLASH_SET_LATENCY(FLASH_LATENCY_1);
+
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  RCC_ClkInitStruct.ClockType =
+  RCC_CLOCKTYPE_HCLK |
+  RCC_CLOCKTYPE_SYSCLK |
+  RCC_CLOCKTYPE_PCLK1;
+
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
+  RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
