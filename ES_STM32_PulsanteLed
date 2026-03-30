@@ -1,0 +1,128 @@
+/* USER CODE BEGIN Header */
+/**
+  ******************************************************************************
+  * @file           : main.c
+  * @brief          : Programma principale (gestione pulsante e LED)
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2026 STMicroelectronics.
+  * Tutti i diritti riservati.
+  *
+  * Il software è fornito secondo i termini del file LICENSE incluso nel progetto.
+  * In assenza del file LICENSE, viene fornito "AS-IS".
+  *
+  ******************************************************************************
+  */
+/* USER CODE END Header */
+
+/* Includes ------------------------------------------------------------------*/
+#include "main.h"
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+
+int main(void)
+{
+  /* Inizializzazione HAL e clock */
+  HAL_Init();
+  SystemClock_Config();
+
+  /* Inizializzazione GPIO */
+  MX_GPIO_Init();
+
+  /* Loop principale */
+  while (1)
+  {
+      // Lettura stato pulsante
+      GPIO_PinState btn_state = HAL_GPIO_ReadPin(USER_BTN_GPIO_Port, USER_BTN_Pin);
+
+      if (btn_state == GPIO_PIN_SET)
+      {
+          // Pulsante premuto → LED lampeggia
+          HAL_GPIO_TogglePin(USER_LED_GPIO_Port, USER_LED_Pin);
+          HAL_Delay(500);
+      }
+      else
+      {
+          // Pulsante non premuto → LED spento
+          HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_RESET);
+      }
+  }
+}
+
+/**
+  * @brief Configurazione clock di sistema
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef osc = {0};
+  RCC_ClkInitTypeDef clk = {0};
+
+  __HAL_FLASH_SET_LATENCY(FLASH_LATENCY_1);
+
+  osc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  osc.HSEState = RCC_HSE_ON;
+
+  if (HAL_RCC_OscConfig(&osc) != HAL_OK)
+    Error_Handler();
+
+  clk.ClockType = RCC_CLOCKTYPE_HCLK |
+                  RCC_CLOCKTYPE_SYSCLK |
+                  RCC_CLOCKTYPE_PCLK1;
+
+  clk.SYSCLKSource   = RCC_SYSCLKSOURCE_HSE;
+  clk.SYSCLKDivider  = RCC_SYSCLK_DIV1;
+  clk.AHBCLKDivider  = RCC_HCLK_DIV1;
+  clk.APB1CLKDivider = RCC_APB1_DIV1;
+
+  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_1) != HAL_OK)
+    Error_Handler();
+}
+
+/**
+  * @brief Inizializzazione GPIO
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* Abilitazione clock porte */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOF_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  /* LED inizialmente spento */
+  HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_RESET);
+
+  /* Configurazione pulsante come input */
+  GPIO_InitStruct.Pin  = USER_BTN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(USER_BTN_GPIO_Port, &GPIO_InitStruct);
+
+  /* Configurazione pin UART (non usati qui ma inizializzati) */
+  GPIO_InitStruct.Pin       = VCP_USART2_TX_Pin | VCP_USART2_RX_Pin;
+  GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull      = GPIO_NOPULL;
+  GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Alternate = GPIO_AF1_USART2;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /* Configurazione LED come output */
+  GPIO_InitStruct.Pin   = USER_LED_Pin;
+  GPIO_InitStruct.Mode  = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull  = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(USER_LED_GPIO_Port, &GPIO_InitStruct);
+}
+
+/**
+  * @brief Gestione errori
+  */
+void Error_Handler(void)
+{
+  __disable_irq();
+  while (1) {}
+}
